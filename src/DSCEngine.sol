@@ -52,7 +52,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TokenAddressesAndPriceFeedAddressesMustBeSameLength();
     error DSCEngine__NotAllowedToken();
     error DSCEngine__TransferFailed();
-    error DSCEngine_BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
     error DSCEngine__MintFailed();
     error DSCEngine__HealthFactoOk(uint256 healthFactor);
     error DSCEngine_HealthFactorNotImproved(uint256 healthFactor);
@@ -222,8 +222,6 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(user);
     }
 
-    function getHealthFactor() external view {}
-
     /* ============ Private & Internal View Functions ============ */
 
     /**
@@ -276,7 +274,7 @@ contract DSCEngine is ReentrancyGuard {
     function _revertIfHealthFactorIsBroken(address user) internal view {
         uint256 userHealthFactor = _healthFactor(user);
         if (userHealthFactor < MIN_HEALTH_FACTOR) {
-            revert DSCEngine_BreaksHealthFactor(userHealthFactor);
+            revert DSCEngine__BreaksHealthFactor(userHealthFactor);
         }
     }
 

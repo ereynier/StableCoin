@@ -19,7 +19,7 @@ contract DSCEngineTest is Test {
     address weth;
     address wbtc;
 
-    address public USER = makeAddr("user"); 
+    address public USER = makeAddr("user");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
@@ -30,7 +30,6 @@ contract DSCEngineTest is Test {
 
         ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
     }
-
 
     /* ===== Constructor Tests ===== */
     address[] public tokenAddresses;
@@ -97,6 +96,155 @@ contract DSCEngineTest is Test {
         uint256 expectedDepositAmount = dscEngine.getTokenAmountFromUsd(weth, collateralValueInUsd);
         assertEq(expectedTotalDscMinted, totalDscMinted);
         assertEq(AMOUNT_COLLATERAL, expectedDepositAmount);
+    }
+
+    /* ===== mintDsc Tests ===== */
+
+    function testMintDsc() public depositedCollateral {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.prank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        assertEq(collateralValueInUsd / 2, dsc.balanceOf(USER) - totalDscMinted);
+    }
+
+    function testRevertIfMintWithoutEnoughCollateral() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        vm.expectRevert();
+        dscEngine.mintDsc(collateralValueInUsd);
+        vm.stopPrank();
+    }
+
+    function testDepositCollateralAndMintDsc() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        uint256 expectedDscMinted = dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL) / 2;
+        dscEngine.depositCollateralAndMintDsc(weth, AMOUNT_COLLATERAL, expectedDscMinted);
+        assertEq(expectedDscMinted, dsc.balanceOf(USER));
+        vm.stopPrank();
+    }
+
+    /* ===== redeemCollateral Tests ===== */
+
+    function testRedeemCollateralForDsc() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        (uint256 totalDscMinted,) = dscEngine.getAccountInformation(USER);
+        dsc.approve(address(dscEngine), totalDscMinted);
+        uint256 wethBalanceBefore = ERC20Mock(weth).balanceOf(USER);
+        dscEngine.redeemCollateralForDsc(weth, AMOUNT_COLLATERAL, totalDscMinted);
+        assertEq(dscEngine.getCollateralBalanceOfUser(weth, USER), 0);
+        assertEq(0, dsc.balanceOf(USER));
+        assertEq(AMOUNT_COLLATERAL + wethBalanceBefore, ERC20Mock(weth).balanceOf(USER));
+        vm.stopPrank();
+    }
+
+    function testRedeemCollateral() public depositedCollateral {
+        vm.startPrank(USER);
+        uint256 wethBalanceBefore = ERC20Mock(weth).balanceOf(USER);
+        dscEngine.redeemCollateral(weth, AMOUNT_COLLATERAL);
+        assertEq(0, dscEngine.getCollateralBalanceOfUser(weth, USER));
+        assertEq(AMOUNT_COLLATERAL + wethBalanceBefore, ERC20Mock(weth).balanceOf(USER));
+        vm.stopPrank();
+    }
+
+    /* ===== burnDsc Tests ===== */
+
+    function testBurnDsc() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        uint256 dscBalanceBefore = dsc.balanceOf(USER);
+        dsc.approve(address(dscEngine), dscBalanceBefore);
+        dscEngine.burnDsc(dscBalanceBefore);
+        assertEq(0, dsc.balanceOf(USER));
+        vm.stopPrank();
+    }
+
+    /* ===== liquidate Tests ===== */
+
+    function testLiquidate() public {
+        
+    }
+
+    /* ===== public & external view Tests ===== */
+
+    function testGetCollateralBalanceOfUser() public depositedCollateral {
+        assertEq(AMOUNT_COLLATERAL, dscEngine.getCollateralBalanceOfUser(USER, weth));
+    }
+
+    function testGetAccountCollateralValue() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        assertEq(collateralValueInUsd, dscEngine.getAccountCollateralValue(USER));
+    }
+
+    function testCalculateHealtFactor() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        uint256 dscBalanceBefore = dsc.balanceOf(USER);
+        uint256 healthFactor = dscEngine.calculateHealthFactor(dscBalanceBefore, collateralValueInUsd);
+        uint256 expectedHealthFactor = dscEngine.getMinHealthFactor();
+        assertEq(expectedHealthFactor, healthFactor);
+        vm.stopPrank();
+    }
+
+    function testGetHealthFactor() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        uint256 healthFactor = dscEngine.getHealthFactor(USER);
+        uint256 expectedHealthFactor = dscEngine.getMinHealthFactor();
+        assertEq(expectedHealthFactor, healthFactor);
+        vm.stopPrank();
+    }
+
+    function testGetAccountInformation() public depositedCollateral {
+        vm.startPrank(USER);
+        (,uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        (uint256 totalDscMintedAfter, uint256 collateralValueInUsdAfter) = dscEngine.getAccountInformation(USER);
+        assertEq(collateralValueInUsd / 2, totalDscMintedAfter);
+        assertEq(collateralValueInUsd, collateralValueInUsdAfter);
+    }
+
+    /* ===== const getters Tests ===== */
+
+    function testGetPrecision() public {
+        assertEq(1e18, dscEngine.getPrecision());
+    }
+
+    function testGetAdditionalFeedPrecision() public {
+        assertEq(1e10, dscEngine.getAdditionalFeedPrecision());
+    }
+
+    function testGetLiquidationThreshold() public {
+        assertEq(50, dscEngine.getLiquidationThreshold());
+    }
+
+    function testGetLiquidationBonus() public {
+        assertEq(10, dscEngine.getLiquidationBonus());
+    }
+
+    function testGetMinHealthFactor() public {
+        assertEq(1e18, dscEngine.getMinHealthFactor());
+    }
+
+    /* ===== immutable getters Tests ===== */
+
+    function testGetCollateralTokens() public {
+        assertEq(weth, dscEngine.getCollateralTokens()[0]);
+        assertEq(wbtc, dscEngine.getCollateralTokens()[1]);
+    }
+
+    function testGetDsc() public {
+        assertEq(address(dsc), dscEngine.getDsc());
+    }
+
+    function testGetCollateralTokenPriceFeed() public {
+        assertEq(ethUsdPriceFeed, dscEngine.getCollateralTokenPriceFeed(weth));
+        assertEq(btcUsdPriceFeed, dscEngine.getCollateralTokenPriceFeed(wbtc));
     }
 
 }
