@@ -2,12 +2,13 @@
 
 pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DeployDSC} from "../../script/DeployDSC.s.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
+import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
 contract DSCEngineTest is Test {
     DeployDSC deployer;
@@ -20,6 +21,7 @@ contract DSCEngineTest is Test {
     address wbtc;
 
     address public USER = makeAddr("user");
+    address public LIQUIDATOR = makeAddr("liquidator");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
@@ -29,6 +31,8 @@ contract DSCEngineTest is Test {
         (ethUsdPriceFeed, btcUsdPriceFeed, weth, wbtc,) = config.activeNetworkConfig();
 
         ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
+        ERC20Mock(wbtc).mint(USER, STARTING_ERC20_BALANCE);
+        ERC20Mock(weth).mint(LIQUIDATOR, STARTING_ERC20_BALANCE);
     }
 
     /* ===== Constructor Tests ===== */
@@ -164,8 +168,50 @@ contract DSCEngineTest is Test {
 
     /* ===== liquidate Tests ===== */
 
-    function testLiquidate() public {
-        
+    function testLiquidate() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        dsc.transfer(LIQUIDATOR, dsc.balanceOf(USER));
+        vm.stopPrank();
+
+        vm.startPrank(LIQUIDATOR);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(1900e8); // update price to 1000 (/2)
+        uint256 liquidatorBalance = dsc.balanceOf(LIQUIDATOR);
+        dsc.approve(address(dscEngine), liquidatorBalance);
+        dscEngine.liquidate(weth, USER, liquidatorBalance);
+        vm.stopPrank();
+    }
+
+    function testPartialLiquidate() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        dsc.transfer(LIQUIDATOR, dsc.balanceOf(USER));
+        vm.stopPrank();
+
+        vm.startPrank(LIQUIDATOR);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(1900e8); // update price to 1000 (/2)
+        uint256 liquidatorBalance = dsc.balanceOf(LIQUIDATOR);
+        dsc.approve(address(dscEngine), liquidatorBalance / 2);
+        dscEngine.liquidate(weth, USER, liquidatorBalance / 2);
+        vm.stopPrank();
+    }
+
+    function testRevertIfHealthFactorIsNotBroken() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        dscEngine.mintDsc(collateralValueInUsd / 2);
+        dsc.transfer(LIQUIDATOR, dsc.balanceOf(USER));
+        vm.stopPrank();
+
+        vm.startPrank(LIQUIDATOR);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(2000e8); // update price to 1000 (/2)
+        uint256 liquidatorBalance = dsc.balanceOf(LIQUIDATOR);
+        dsc.approve(address(dscEngine), liquidatorBalance);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__HealthFactoOk.selector, 1000000000000000000));
+        dscEngine.liquidate(weth, USER, liquidatorBalance);
+        vm.stopPrank();
     }
 
     /* ===== public & external view Tests ===== */
@@ -175,8 +221,14 @@ contract DSCEngineTest is Test {
     }
 
     function testGetAccountCollateralValue() public depositedCollateral {
-        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
-        assertEq(collateralValueInUsd, dscEngine.getAccountCollateralValue(USER));
+        vm.startPrank(USER);
+        ERC20Mock(wbtc).mint(USER, AMOUNT_COLLATERAL);
+        ERC20Mock(wbtc).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.depositCollateral(wbtc, AMOUNT_COLLATERAL);
+        uint256 totalValueInUsdExpected = dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL) + dscEngine.getUsdValue(wbtc, AMOUNT_COLLATERAL);
+        uint256 totalValueInUsd = dscEngine.getAccountCollateralValue(USER);
+        assertEq(totalValueInUsd, totalValueInUsdExpected);
+        vm.stopPrank();
     }
 
     function testCalculateHealtFactor() public depositedCollateral {
