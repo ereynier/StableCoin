@@ -23,7 +23,7 @@ contract DecentralizedStableCoinTest is Test {
 
     function testBurn() public {
         vm.startPrank(USER);
-        dsc.mint(address(this), 100);
+        dsc.mint(USER, 100);
         dsc.burn(50);
         assertEq(dsc.balanceOf(USER), 50);
         vm.stopPrank();
