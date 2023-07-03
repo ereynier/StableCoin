@@ -273,6 +273,15 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function testCalculateHealthFactorWithZeroDscMinted() public depositedCollateral {
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        vm.startPrank(USER);
+        uint256 expectedHealtFactor = type(uint256).max;
+        uint256 healthFactor= dscEngine.calculateHealthFactor(0, collateralValueInUsd);
+        assertEq(expectedHealtFactor, healthFactor);
+        vm.stopPrank();
+    }
+
     function testGetHealthFactor() public depositedCollateral {
         (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
         vm.startPrank(USER);
