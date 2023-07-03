@@ -292,6 +292,12 @@ contract DSCEngine is ReentrancyGuard {
 
     /* ============ Public and External View Functions ============ */
 
+    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
+        return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION;
+    }
+
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
@@ -311,12 +317,6 @@ contract DSCEngine is ReentrancyGuard {
         return totalCollateralValueInUsd;
     }
 
-    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
-        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
-        return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION;
-    }
-
     function getAccountInformation(address user)
         external
         view
@@ -331,6 +331,10 @@ contract DSCEngine is ReentrancyGuard {
         returns (uint256)
     {
         return _calculateHealthFactor(totalDscMinted, collateralValueInUsd);
+    }
+
+    function getHealthFactor(address user) external view returns (uint256) {
+        return _healthFactor(user);
     }
 
     function getPrecision() external pure returns (uint256) {
@@ -363,9 +367,5 @@ contract DSCEngine is ReentrancyGuard {
 
     function getCollateralTokenPriceFeed(address token) external view returns (address) {
         return s_priceFeeds[token];
-    }
-
-    function getHealthFactor(address user) external view returns (uint256) {
-        return _healthFactor(user);
     }
 }
