@@ -8,7 +8,6 @@ Decentralized Stablecoin
   - [Built With](#built-with)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
-- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
@@ -48,6 +47,8 @@ To get started with the Decentralized Stablecoin project, follow the steps below
     ETHERSCAN_API_KEY=<your_etherscan_api_key>
     ```
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Usage
 
 This section describes how to use the Decentralized Stablecoin project.
@@ -66,6 +67,8 @@ For example, to deploy the project on the "sepolia" network, run:
 make deploy ARGS="--network sepolia"
 ```
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -79,9 +82,13 @@ Contributions are welcome and appreciated! If you would like to contribute to th
 
 Your contributions will be reviewed and merged if they align with the project's goals.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## License
 
 The Decentralized Stablecoin project is distributed under the MIT License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTACT -->
 ## Contact
@@ -91,6 +98,8 @@ If you have any questions or suggestions regarding the Decentralized Stablecoin 
 Estéban Reynier - [@EstebanReynier](https://twitter.com/EstebanReynier) - [ereynier.42@gmail.com](mailto:ereynier.42@gmail.com)
 
 Project Link: [https://github.com/ereynier/StableCoin](https://github.com/ereynier/StableCoin)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
