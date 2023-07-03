@@ -22,7 +22,7 @@ This project is an algorithmic decentralized stablecoin based on the Patrick Col
 ### Built With
 
 - [![Solidity](https://img.shields.io/badge/Solidity-363636?style=for-the-badge&logo=solidity&logoColor=white)](https://soliditylang.org/)
-- [![Foundry](https://img.shields.io/badge/Foundry-008EFD?style=for-the-badge&logo=ethereum&logoColor=white)](https://foundry.finance/)
+- [![Foundry](https://img.shields.io/badge/Foundry-008EFD?style=for-the-badge&logo=ethereum&logoColor=white)](https://book.getfoundry.sh/)
 - [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-2D3436?style=for-the-badge&logo=ethereum&logoColor=white)](https://openzeppelin.com/)
 - [![Chainlink](https://img.shields.io/badge/Chainlink-375BD2?style=for-the-badge&logo=chainlink&logoColor=white)](https://chain.link/)
 
